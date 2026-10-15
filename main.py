@@ -19,6 +19,7 @@ from sqlalchemy import (
     DateTime,
     select,
 )
+
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -43,10 +44,20 @@ BASE_DIR = Path(__file__).resolve().parent
 # Database
 # --------------------------------------------------
 
-DB = os.getenv(
-    "DATABASE_URL",
-    "sqlite:///./restaurant_ai.db"
-)
+# Vercel serverless filesystem:
+# /tmp is writable.
+#
+# Locally:
+# restaurant_ai.db will be created normally.
+
+if os.getenv("VERCEL"):
+    DB = "sqlite:////tmp/restaurant_ai.db"
+else:
+    DB = os.getenv(
+        "DATABASE_URL",
+        "sqlite:///./restaurant_ai.db"
+    )
+
 
 engine = create_engine(
     DB,
@@ -131,6 +142,7 @@ app.add_middleware(
 # --------------------------------------------------
 
 class RIn(BaseModel):
+
     guest_name: str = Field(
         min_length=2
     )
@@ -145,11 +157,14 @@ class RIn(BaseModel):
     )
 
     date: str
+
     time: str
+
     notes: str = ""
 
 
 class CIn(BaseModel):
+
     message: str = Field(
         min_length=2,
         max_length=1200
@@ -157,10 +172,11 @@ class CIn(BaseModel):
 
 
 # --------------------------------------------------
-# Helpers
+# Intent Detection
 # --------------------------------------------------
 
 def intent(text):
+
     text = text.lower()
 
     if any(
@@ -210,6 +226,10 @@ def intent(text):
     return "general"
 
 
+# --------------------------------------------------
+# Safe Demo Responses
+# --------------------------------------------------
+
 def fallback(intent_name):
 
     messages = {
@@ -238,7 +258,7 @@ def fallback(intent_name):
 
 
 # --------------------------------------------------
-# Frontend Routes
+# Frontend
 # --------------------------------------------------
 
 @app.get("/")
@@ -247,12 +267,15 @@ def root():
     index_file = BASE_DIR / "index.html"
 
     if not index_file.exists():
+
         raise HTTPException(
             status_code=500,
             detail="index.html not found"
         )
 
-    return FileResponse(index_file)
+    return FileResponse(
+        index_file
+    )
 
 
 @app.get("/styles.css")
@@ -261,6 +284,7 @@ def styles():
     css_file = BASE_DIR / "styles.css"
 
     if not css_file.exists():
+
         raise HTTPException(
             status_code=404,
             detail="styles.css not found"
@@ -278,6 +302,7 @@ def javascript():
     js_file = BASE_DIR / "app.js"
 
     if not js_file.exists():
+
         raise HTTPException(
             status_code=404,
             detail="app.js not found"
@@ -290,18 +315,25 @@ def javascript():
 
 
 # --------------------------------------------------
-# Health
+# Health Check
 # --------------------------------------------------
 
 @app.get("/api/health")
 def health():
 
     return {
+
         "status": "ok",
+
         "ai_mode":
             "openai"
             if os.getenv("OPENAI_API_KEY")
             else "safe-demo",
+
+        "database":
+            "temporary-sqlite"
+            if os.getenv("VERCEL")
+            else "local-sqlite"
     }
 
 
@@ -324,6 +356,7 @@ def chat(p: CIn):
 
     source = "safe-demo"
 
+
     if (
         os.getenv("OPENAI_API_KEY")
         and OpenAI
@@ -337,6 +370,7 @@ def chat(p: CIn):
                 )
             )
 
+
             response = client.responses.create(
 
                 model=os.getenv(
@@ -345,31 +379,44 @@ def chat(p: CIn):
                 ),
 
                 input=[
+
                     {
                         "role": "system",
+
                         "content":
                             "You are a concise restaurant operations assistant. "
-                            "Do not invent menu, hours, prices, policies, or availability. "
+                            "Do not invent menu, hours, prices, policies, "
+                            "or availability. "
                             "If data is missing, say it must be connected."
                     },
+
                     {
                         "role": "user",
                         "content": p.message
                     }
+
                 ],
 
                 timeout=12
             )
+
 
             reply = (
                 response.output_text
                 or reply
             ).strip()
 
+
             source = "openai"
 
-        except Exception:
-            pass
+
+        except Exception as error:
+
+            print(
+                "OpenAI error:",
+                error
+            )
+
 
     return {
 
@@ -410,113 +457,151 @@ def create(p: RIn):
             detail="Date must be YYYY-MM-DD"
         )
 
-    with Session(engine) as session:
 
-        reservation = Reservation(
-            **p.model_dump()
+    try:
+
+        with Session(engine) as session:
+
+            reservation = Reservation(
+                **p.model_dump()
+            )
+
+            session.add(
+                reservation
+            )
+
+            session.commit()
+
+            session.refresh(
+                reservation
+            )
+
+
+            return {
+
+                "id":
+                    reservation.id,
+
+                "guest_name":
+                    reservation.guest_name,
+
+                "party_size":
+                    reservation.party_size,
+
+                "date":
+                    reservation.date,
+
+                "time":
+                    reservation.time,
+
+                "status":
+                    reservation.status,
+            }
+
+
+    except Exception as error:
+
+        print(
+            "Reservation database error:",
+            error
         )
 
-        session.add(
-            reservation
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to save reservation"
         )
-
-        session.commit()
-
-        session.refresh(
-            reservation
-        )
-
-        return {
-
-            "id":
-                reservation.id,
-
-            "guest_name":
-                reservation.guest_name,
-
-            "party_size":
-                reservation.party_size,
-
-            "date":
-                reservation.date,
-
-            "time":
-                reservation.time,
-
-            "status":
-                reservation.status,
-        }
 
 
 # --------------------------------------------------
-# Reservation List
+# Get Reservations
 # --------------------------------------------------
 
 @app.get("/api/reservations")
 def reservations():
 
-    with Session(engine) as session:
+    try:
 
-        rows = session.scalars(
+        with Session(engine) as session:
 
-            select(
-                Reservation
-            )
+            rows = session.scalars(
 
-            .order_by(
-                Reservation.id.desc()
-            )
+                select(
+                    Reservation
+                )
 
-            .limit(20)
+                .order_by(
+                    Reservation.id.desc()
+                )
 
-        ).all()
+                .limit(20)
 
-        return [
+            ).all()
 
-            {
 
-                "id":
-                    row.id,
+            return [
 
-                "guest_name":
-                    row.guest_name,
+                {
 
-                "party_size":
-                    row.party_size,
+                    "id":
+                        row.id,
 
-                "date":
-                    row.date,
+                    "guest_name":
+                        row.guest_name,
 
-                "time":
-                    row.time,
+                    "party_size":
+                        row.party_size,
 
-                "status":
-                    row.status,
+                    "date":
+                        row.date,
 
-            }
+                    "time":
+                        row.time,
 
-            for row in rows
-        ]
+                    "status":
+                        row.status,
+
+                }
+
+                for row in rows
+
+            ]
+
+
+    except Exception as error:
+
+        print(
+            "Reservation read error:",
+            error
+        )
+
+        return []
 
 
 # --------------------------------------------------
-# Operations Summary
+# Operations
 # --------------------------------------------------
 
 @app.get("/api/ops")
 def ops():
 
-    with Session(engine) as session:
+    try:
 
-        count = len(
+        with Session(engine) as session:
 
-            session.scalars(
-                select(
-                    Reservation
-                )
-            ).all()
+            count = len(
 
-        )
+                session.scalars(
+                    select(
+                        Reservation
+                    )
+                ).all()
+
+            )
+
+    except Exception:
+
+        count = 0
+
 
     return {
 
