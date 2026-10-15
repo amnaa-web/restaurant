@@ -8,7 +8,6 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 
 from pydantic import BaseModel, Field
 
@@ -38,7 +37,6 @@ except Exception:
 # --------------------------------------------------
 
 BASE_DIR = Path(__file__).resolve().parent
-STATIC_DIR = BASE_DIR / "static"
 
 
 # --------------------------------------------------
@@ -125,17 +123,6 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
-)
-
-
-# --------------------------------------------------
-# Static Frontend
-# --------------------------------------------------
-
-app.mount(
-    "/static",
-    StaticFiles(directory=STATIC_DIR),
-    name="static"
 )
 
 
@@ -251,21 +238,55 @@ def fallback(intent_name):
 
 
 # --------------------------------------------------
-# Frontend Route
+# Frontend Routes
 # --------------------------------------------------
 
 @app.get("/")
 def root():
 
-    index_file = STATIC_DIR / "index.html"
+    index_file = BASE_DIR / "index.html"
 
     if not index_file.exists():
         raise HTTPException(
             status_code=500,
-            detail="Frontend index.html not found"
+            detail="index.html not found"
         )
 
     return FileResponse(index_file)
+
+
+@app.get("/styles.css")
+def styles():
+
+    css_file = BASE_DIR / "styles.css"
+
+    if not css_file.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="styles.css not found"
+        )
+
+    return FileResponse(
+        css_file,
+        media_type="text/css"
+    )
+
+
+@app.get("/app.js")
+def javascript():
+
+    js_file = BASE_DIR / "app.js"
+
+    if not js_file.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="app.js not found"
+        )
+
+    return FileResponse(
+        js_file,
+        media_type="application/javascript"
+    )
 
 
 # --------------------------------------------------
