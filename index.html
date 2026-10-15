@@ -1,1 +1,317 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ServeAI Restaurant MVP</title><link rel="stylesheet" href="styles.css"></head><body><header><div><b>ServeAI</b><span id="status">Checking backend...</span></div></header><main><section class="hero"><p class="eyebrow">RESTAURANT AI AGENT MVP</p><h1>Automate reservations, customer questions, and staff handoff.</h1><p>A lightweight working demo for restaurant operations.</p></section><section class="grid"><article class="card"><h2>AI Concierge</h2><div id="chatLog" class="chat"><div class="msg bot">Hi! Ask me to book a table or help with a restaurant question.</div></div><form id="chatForm"><input id="chatInput" placeholder="I need a table for 4 tomorrow at 7pm" required><button>Send</button></form><small id="chatMeta"></small></article><article class="card"><h2>Create Reservation</h2><form id="bookingForm" class="booking"><input name="guest_name" placeholder="Guest name" required><input name="phone" placeholder="Phone" required><input name="party_size" type="number" min="1" max="20" value="2" required><input name="date" type="date" required><input name="time" type="time" required><textarea name="notes" placeholder="Notes"></textarea><button>Confirm Reservation</button></form><div id="bookingResult"></div></article></section><section class="grid"><article class="card"><h2>Recommended Workflows</h2><div id="workflowList"></div></article><article class="card"><h2>Recent Reservations</h2><div id="bookingList"></div></article></section><section class="flow">Phone / Web / WhatsApp → FastAPI → AI Agent → Booking / CRM / POS / Calendar → Database → Staff escalation</section></main><script src="app.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>ServeAI Restaurant MVP</title>
+
+  <link
+    rel="stylesheet"
+    href="/static/styles.css"
+  />
+</head>
+
+<body>
+
+  <header>
+    <div class="header-inner">
+
+      <div class="brand">
+        <b>ServeAI</b>
+        <span class="brand-dot">●</span>
+      </div>
+
+      <span
+        id="status"
+        class="status"
+      >
+        Checking backend...
+      </span>
+
+    </div>
+  </header>
+
+
+  <main>
+
+    <!-- HERO -->
+    <section class="hero">
+
+      <p class="eyebrow">
+        RESTAURANT AI AGENT MVP
+      </p>
+
+      <h1>
+        Automate reservations,
+        customer questions,
+        and staff handoff.
+      </h1>
+
+      <p class="hero-text">
+        A lightweight working demo showing how AI agents
+        can support restaurant customer service,
+        reservations, and daily operations.
+      </p>
+
+    </section>
+
+
+    <!-- FIRST ROW -->
+    <section class="grid">
+
+      <!-- AI CONCIERGE -->
+      <article class="card">
+
+        <div class="card-header">
+
+          <div>
+            <p class="eyebrow">
+              CUSTOMER SERVICE
+            </p>
+
+            <h2>
+              AI Concierge
+            </h2>
+          </div>
+
+          <span class="live-badge">
+            Live
+          </span>
+
+        </div>
+
+
+        <div
+          id="chatLog"
+          class="chat"
+        >
+
+          <div class="msg bot">
+            Hi! I can help with reservations,
+            restaurant questions,
+            and support requests.
+            Try asking me to book a table.
+          </div>
+
+        </div>
+
+
+        <form
+          id="chatForm"
+          class="chat-form"
+        >
+
+          <input
+            id="chatInput"
+            type="text"
+            placeholder="I need a table for 4 tomorrow at 7pm"
+            autocomplete="off"
+            required
+          />
+
+          <button type="submit">
+            Send
+          </button>
+
+        </form>
+
+
+        <small
+          id="chatMeta"
+          class="meta"
+        ></small>
+
+      </article>
+
+
+      <!-- RESERVATION FORM -->
+      <article class="card">
+
+        <div class="card-header">
+
+          <div>
+            <p class="eyebrow">
+              RESERVATIONS
+            </p>
+
+            <h2>
+              Create Reservation
+            </h2>
+          </div>
+
+        </div>
+
+
+        <form
+          id="bookingForm"
+          class="booking"
+        >
+
+          <label>
+            Guest Name
+
+            <input
+              name="guest_name"
+              placeholder="Guest name"
+              minlength="2"
+              required
+            />
+          </label>
+
+
+          <label>
+            Phone
+
+            <input
+              name="phone"
+              placeholder="+92 300 0000000"
+              minlength="5"
+              required
+            />
+          </label>
+
+
+          <label>
+            Party Size
+
+            <input
+              name="party_size"
+              type="number"
+              min="1"
+              max="20"
+              value="2"
+              required
+            />
+          </label>
+
+
+          <label>
+            Date
+
+            <input
+              name="date"
+              type="date"
+              required
+            />
+          </label>
+
+
+          <label>
+            Time
+
+            <input
+              name="time"
+              type="time"
+              required
+            />
+          </label>
+
+
+          <label class="full">
+            Notes
+
+            <textarea
+              name="notes"
+              placeholder="Optional notes"
+            ></textarea>
+          </label>
+
+
+          <button
+            type="submit"
+            class="full"
+          >
+            Confirm Reservation
+          </button>
+
+        </form>
+
+
+        <div
+          id="bookingResult"
+          class="booking-result"
+        ></div>
+
+      </article>
+
+    </section>
+
+
+    <!-- SECOND ROW -->
+    <section class="grid">
+
+      <!-- RECOMMENDED WORKFLOWS -->
+      <article class="card">
+
+        <p class="eyebrow">
+          AUTOMATION
+        </p>
+
+        <h2>
+          Recommended Workflows
+        </h2>
+
+        <div
+          id="workflowList"
+          class="workflow-list"
+        ></div>
+
+      </article>
+
+
+      <!-- RECENT RESERVATIONS -->
+      <article class="card">
+
+        <p class="eyebrow">
+          ACTIVITY
+        </p>
+
+        <h2>
+          Recent Reservations
+        </h2>
+
+        <div
+          id="bookingList"
+          class="booking-list"
+        ></div>
+
+      </article>
+
+    </section>
+
+
+    <!-- ARCHITECTURE -->
+    <section class="flow">
+
+      <p>
+        Suggested Production Architecture
+      </p>
+
+      <strong>
+        Phone / Web / WhatsApp
+        →
+        FastAPI
+        →
+        AI Agent
+        →
+        Booking / CRM / POS / Calendar
+        →
+        Database
+        →
+        Staff Escalation
+      </strong>
+
+    </section>
+
+  </main>
+
+
+  <script src="/static/app.js"></script>
+
+</body>
+</html>
